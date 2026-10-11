@@ -195,31 +195,77 @@ class GPTLanguageModel(nn.Module):
             idx = torch.cat((idx, idx_next), dim=1) # (B, T+1)
         return idx
 
-model = GPTLanguageModel()
-m = model.to(device)
-# print the number of parameters in the model
-print(sum(p.numel() for p in m.parameters())/1e6, 'M parameters')
+checkpoint = torch.load(
+    'gpt_checkpoint.pth',
+    map_location=device,
+    weights_only=True
+)
+
+# Restore configuration BEFORE creating the model
+config = checkpoint['config']
+n_embd = config['n_embd']
+n_head = config['n_head']
+n_layer = config['n_layer']
+block_size = config['block_size']
+dropout = config['dropout']
+
+# Restore vocabulary
+vocab_size = checkpoint['vocab_size']
+stoi = checkpoint['stoi']
+itos = checkpoint['itos']
+
+# Create model and load trained weights
+model = GPTLanguageModel().to(device)
+model.load_state_dict(checkpoint['model_state_dict'])
+model.eval()
+
+print(sum(p.numel() for p in model.parameters()) / 1e6, 'M parameters')
+
+# Generate text
+decode = lambda l: ''.join(itos[i] for i in l)
+
+context = torch.zeros((1, 1), dtype=torch.long, device=device)
+
+with torch.no_grad():
+    output = model.generate(context, max_new_tokens=500)
+
+print(decode(output[0].tolist()))
 
 # create a PyTorch optimizer
 optimizer = torch.optim.AdamW(model.parameters(), lr=learning_rate)
 
-for iter in range(max_iters):
+# for iter in range(max_iters):
 
-    # every once in a while evaluate the loss on train and val sets
-    if iter % eval_interval == 0 or iter == max_iters - 1:
-        losses = estimate_loss()
-        print(f"step {iter}: train loss {losses['train']:.4f}, val loss {losses['val']:.4f}")
+#     # every once in a while evaluate the loss on train and val sets
+#     if iter % eval_interval == 0 or iter == max_iters - 1:
+#         losses = estimate_loss()
+#         print(f"step {iter}: train loss {losses['train']:.4f}, val loss {losses['val']:.4f}")
 
-    # sample a batch of data
-    xb, yb = get_batch('train')
+#     # sample a batch of data
+#     xb, yb = get_batch('train')
 
-    # evaluate the loss
-    logits, loss = model(xb, yb)
-    optimizer.zero_grad(set_to_none=True)
-    loss.backward()
-    optimizer.step()
+#     # evaluate the loss
+#     logits, loss = model(xb, yb)
+#     optimizer.zero_grad(set_to_none=True)
+#     loss.backward()
+#     optimizer.step()
 
+# # save the model and optimizer state
+# torch.save({
+#     'model_state_dict': model.state_dict(),
+#     'optimizer_state_dict': optimizer.state_dict(),
+#     'stoi': stoi,
+#     'itos': itos,
+#     'vocab_size': vocab_size,
+#     'config': {
+#         'n_embd': n_embd,
+#         'n_head': n_head,
+#         'n_layer': n_layer,
+#         'block_size': block_size,
+#         'dropout': dropout,
+#     }
+# }, 'gpt_checkpoint.pth')
 # generate from the model
 context = torch.zeros((1, 1), dtype=torch.long, device=device)
-print(decode(m.generate(context, max_new_tokens=500)[0].tolist()))
-#open('more.txt', 'w').write(decode(m.generate(context, max_new_tokens=10000)[0].tolist()))
+print(decode(model.generate(context, max_new_tokens=500)[0].tolist()))
+#open('more.txt', 'w').write(decode(model.generate(context, max_new_tokens=10000)[0].tolist()))
