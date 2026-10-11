@@ -86,8 +86,8 @@ Linear LM head -> logits over 65 characters
 
 | Metric | Value |
 |---|---|
-| Final train loss | TBD |
-| Final validation loss | TBD |
+| Final train loss | 1.13 |
+| Final validation loss | 1.48 |
 
 ---
 
@@ -151,5 +151,4 @@ Python-GPT/
 ## References
 
 - Vaswani et al., *Attention Is All You Need* (2017)
-- Radford et al., *Language Models are Unsupervised Multitask Learners* (GPT-2)
 - Andrej Karpathy, *Let's build GPT* and *nanoGPT*
